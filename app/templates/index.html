@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ChatPLVis</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Include Plotly.js -->
+    <script src="https://cdn.plot.ly/plotly-2.9.0.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+    <!-- Header with Title and Dark Mode Toggle -->
+    <div id="header">
+        <center><h1>ChatPLVis</h1></center>
+        <button id="dark-mode-toggle">Dark Mode</button>
+    </div>
+
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div id="loading-content">
+            <div class="spinner"></div>
+            <p>Loading Graph... Please wait.</p>
+        </div>
+    </div>
+
+    <div id="main-container">
+        <!-- Left Panel -->
+        <div id="left-panel">
+            <!-- Controls -->
+            <div id="controls">
+                <form method="POST" id="controls-form">
+                    <label for="sel_col">Select Column:</label>
+                    <select name="sel_col" id="sel_col">
+                        {% for option in column_options %}
+                            <option value="{{ option }}" {% if option == sel_col %}selected{% endif %}>{{ option }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <label for="sel_comp">Select Comparison:</label>
+                    <select name="sel_comp" id="sel_comp">
+                        {% for option in comparison_options %}
+                            <option value="{{ option }}" {% if option == sel_comp %}selected{% endif %}>{{ option }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <label for="plot_type">Plot Type:</label>
+                    <select name="plot_type" id="plot_type">
+                        {% for p_option in plot_options %}
+                            <option value="{{ p_option }}" {% if p_option == plot_type %}selected{% endif %}>{{ p_option }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <button type="submit">Update Plot</button>
+                </form>
+            </div>
+
+            <div id="selected-nodes-list">
+                <h3>Selected Proteins:</h3>
+                <div id="selected-proteins-container">
+                    <ul id="selected-proteins"></ul>
+                </div>
+                <!-- Add a clear all button -->
+                <button id="clear-all-button" style="margin-top:10px; padding:5px 10px; background:#dc3545; border:none; color:#fff; cursor:pointer; border-radius:5px; font-size:0.9em;">Clear All</button>
+            </div>
+            
+
+            <!-- Chatbot -->
+            <div id="chatbot" style="display:none;">
+                <h3>Chatbot</h3>
+                <label><input type="checkbox" id="include-similar" checked> Include Top 5 Similar Proteins</label>
+                <div id="chatbot-messages"></div>
+                <div id="chatbot-input-container">
+                    <input type="text" id="chatbot-input" placeholder="Type your message here...">
+                    <button id="chatbot-send">Send</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Graph Container -->
+        <div id="graph"></div>
+    </div>
+
+    <script>
+        // Show loading screen
+        document.getElementById('loading-screen').style.display = 'flex';
+
+        const plotType = "{{ plot_type }}";
+        const nodes = {{ nodes|tojson }};
+        const edges = {{ edges|tojson }};
+
+        let data;
+        if (plotType.startsWith("3D")) {
+            const nodeX = nodes.map(node => node.x);
+            const nodeY = nodes.map(node => node.y);
+            const nodeZ = nodes.map(node => node.z);
+            const labels = nodes.map(node => node.label);
+            const ids = nodes.map(node => node.id);
+            const sizes = nodes.map(node => node.size);
+            const nodeColors = nodes.map(node => node.color);
+
+            const nodePositions = nodes.reduce((acc, node) => {
+                acc[node.id] = node;
+                return acc;
+            }, {});
+
+            const edgeX = [];
+            const edgeY = [];
+            const edgeZ = [];
+
+            for (let edge of edges) {
+                const source = nodePositions[edge.source];
+                const target = nodePositions[edge.target];
+                edgeX.push(source.x, target.x, null);
+                edgeY.push(source.y, target.y, null);
+                edgeZ.push(source.z, target.z, null);
+            }
+
+            data = [
+                // Edges
+                {
+                    x: edgeX,
+                    y: edgeY,
+                    z: edgeZ,
+                    mode: 'lines',
+                    type: 'scatter3d',
+                    line: {
+                        color: 'rgba(150,150,150,0.7)',  
+                        width: 1, 
+                    },
+                    hoverinfo: 'none',
+                },
+                // Nodes
+                {
+                    x: nodeX,
+                    y: nodeY,
+                    z: nodeZ,
+                    mode: 'markers',
+                    type: 'scatter3d',
+                    marker: {
+                        size: sizes,
+                        color: nodeColors,
+                        opacity: 0.9,
+                        line: {
+                            color: '#FFFFFF',
+                            width: 0.5
+                        },
+                    },
+                    text: labels,
+                    customdata: ids,
+                    hoverinfo: 'text',
+                    hoverlabel: {
+                        bgcolor: '#FFFFFF',
+                        font: {color: '#000000'},
+                    },
+                }
+            ];
+
+            var layout = {
+                scene: {
+                    xaxis: {visible: false},
+                    yaxis: {visible: false},
+                    zaxis: {visible: false},
+                    bgcolor: '#ffffff', 
+                    camera: {
+                        eye: {x: 1.5, y: 1.5, z: 1.5}
+                    },
+                },
+                paper_bgcolor: '#ffffff', 
+                margin: {
+                    l: 0,
+                    r: 0,
+                    b: 0,
+                    t: 0,
+                },
+                showlegend: false,
+            };
+
+        } else {
+            const nodeX = nodes.map(node => node.x);
+            const nodeY = nodes.map(node => node.y);
+            const labels = nodes.map(node => node.label);
+            const ids = nodes.map(node => node.id);
+            const sizes = nodes.map(node => node.size);
+            const nodeColors = nodes.map(node => node.color);
+
+            data = [
+                {
+                    x: nodeX,
+                    y: nodeY,
+                    mode: 'markers',
+                    type: 'scatter',
+                    marker: {
+                        size: sizes,
+                        color: nodeColors,
+                        opacity: 0.9,
+                        line: {
+                            color: '#FFFFFF',
+                            width: 0.5
+                        },
+                    },
+                    text: labels,
+                    customdata: ids,
+                    hoverinfo: 'text',
+                    hoverlabel: {
+                        bgcolor: '#FFFFFF',
+                        font: {color: '#000000'},
+                    },
+                }
+            ];
+
+            var layout = {
+                xaxis: {visible: false},
+                yaxis: {visible: false},
+                paper_bgcolor: '#ffffff', 
+                margin: {
+                    l: 0,
+                    r: 0,
+                    b: 0,
+                    t: 0,
+                },
+                showlegend: false,
+            };
+        }
+
+        Plotly.newPlot('graph', data, layout).then(function() {
+            // Hide loading screen
+            document.getElementById('loading-screen').style.display = 'none';
+        });
+
+        var selectedNodeIds = [];
+        var graphDiv = document.getElementById('graph');
+        var selectedProteinsList = document.getElementById('selected-proteins');
+        var clearAllButton = document.getElementById('clear-all-button');
+
+        function updateSelectedProteinsList() {
+            selectedProteinsList.innerHTML = '';
+            selectedNodeIds.forEach(function(id) {
+                const node = nodes.find(n => n.id === id);
+                if (node) {
+                    const li = document.createElement('li');
+                    // Add remove button next to the protein name
+                    li.innerHTML = `${node.protein_name} <button class="remove-protein" data-node-id="${id}" style="margin-left:10px;background:#dc3545;border:none;color:#fff;border-radius:3px;padding:2px 5px;cursor:pointer;">X</button>`;
+                    selectedProteinsList.appendChild(li);
+                }
+            });
+        }
+
+        graphDiv.on('plotly_click', function(data){
+            var point = data.points[0];
+            var node_id = point.customdata;
+            console.log('Clicked node:', node_id);
+
+            if (selectedNodeIds.includes(node_id)) {
+                selectedNodeIds = selectedNodeIds.filter(id => id !== node_id);
+            } else {
+                selectedNodeIds.push(node_id);
+            }
+
+            updateSelectedProteinsList();
+
+            if (selectedNodeIds.length > 0) {
+                document.getElementById('chatbot').style.display = 'block';
+            } else {
+                document.getElementById('chatbot').style.display = 'none';
+            }
+        });
+
+        // Event listener to handle removing a single protein
+        document.getElementById('selected-proteins-container').addEventListener('click', function(e) {
+            if (e.target && e.target.classList.contains('remove-protein')) {
+                var nodeIdToRemove = parseInt(e.target.getAttribute('data-node-id'));
+                selectedNodeIds = selectedNodeIds.filter(id => id !== nodeIdToRemove);
+                updateSelectedProteinsList();
+                if (selectedNodeIds.length === 0) {
+                    document.getElementById('chatbot').style.display = 'none';
+                }
+            }
+        });
+
+        // Clear all selections
+        clearAllButton.addEventListener('click', function() {
+            selectedNodeIds = [];
+            updateSelectedProteinsList();
+            document.getElementById('chatbot').style.display = 'none';
+        });
+
+        var sendButton = document.getElementById('chatbot-send');
+        var inputField = document.getElementById('chatbot-input');
+        var messagesDiv = document.getElementById('chatbot-messages');
+
+        sendButton.onclick = function(){
+            if (selectedNodeIds.length === 0) {
+                alert('Please select at least one node first.');
+                return;
+            }
+
+            var message = inputField.value.trim();
+            if (message === '') {
+                alert('Please enter a message.');
+                return;
+            }
+
+            var includeSimilar = document.getElementById('include-similar').checked;
+
+            messagesDiv.innerHTML += '<p><strong>You:</strong> ' + message + '</p>';
+            inputField.value = '';
+
+            fetch('/chatbot', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    node_ids: selectedNodeIds,
+                    message: message,
+                    include_similar: includeSimilar
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                messagesDiv.innerHTML += '<p><strong>PLVis:</strong> ' + data.message + '</p>';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                messagesDiv.innerHTML += '<p><strong>PLVis:</strong> An error occurred. Please try again later.</p>';
+            });
+        };
+
+        // Dark mode toggle
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+        darkModeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+        });
+    </script>
+
+</body>
+</html>

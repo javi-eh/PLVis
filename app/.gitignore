@@ -1,0 +1,4 @@
+myenv
+data/coordinates.npy
+data/embeddings.npy
+data/similarity_matrix.npy
