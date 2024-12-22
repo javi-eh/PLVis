@@ -51,6 +51,13 @@
                         {% endfor %}
                     </select>
 
+                    <label for="info_source">Info Source:</label>
+                    <select name="info_source" id="info_source">
+                        {% for i_option in info_options %}
+                            <option value="{{ i_option }}" {% if i_option == info_source %}selected{% endif %}>{{ i_option }}</option>
+                        {% endfor %}
+                    </select>
+
                     <button type="submit">Update Plot</button>
                 </form>
             </div>
@@ -88,6 +95,11 @@
         const plotType = "{{ plot_type }}";
         const nodes = {{ nodes|tojson }};
         const edges = {{ edges|tojson }};
+
+        var selectedNodeIds = [];
+        var graphDiv = document.getElementById('graph');
+        var selectedProteinsList = document.getElementById('selected-proteins');
+        var clearAllButton = document.getElementById('clear-all-button');
 
         let data;
         if (plotType.startsWith("3D")) {
@@ -228,11 +240,6 @@
             document.getElementById('loading-screen').style.display = 'none';
         });
 
-        var selectedNodeIds = [];
-        var graphDiv = document.getElementById('graph');
-        var selectedProteinsList = document.getElementById('selected-proteins');
-        var clearAllButton = document.getElementById('clear-all-button');
-
         function updateSelectedProteinsList() {
             selectedProteinsList.innerHTML = '';
             selectedNodeIds.forEach(function(id) {
@@ -319,8 +326,9 @@
             })
             .then(response => response.json())
             .then(data => {
-                messagesDiv.innerHTML += '<p><strong>PLVis:</strong> ' + data.message + '</p>';
-            })
+    messagesDiv.innerHTML += '<p><strong>PLVis:</strong></p>' + data.message;
+})
+
             .catch(error => {
                 console.error('Error:', error);
                 messagesDiv.innerHTML += '<p><strong>PLVis:</strong> An error occurred. Please try again later.</p>';

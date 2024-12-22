@@ -1,4 +1,3 @@
-
 from flask import Flask, render_template, request, jsonify
 import pandas as pd
 import numpy as np
@@ -13,17 +12,19 @@ app = Flask(__name__)
 # Global variables to store user selections
 sel_col = 'Total_Counts'
 sel_comp = 'All proteomes'
-plot_type = '3D'  # default plot type
+plot_type = '2D'  # default plot type
+info_source = 'Abstracts'  # default info source
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    global sel_col, sel_comp, plot_type
+    global sel_col, sel_comp, plot_type, info_source
 
     if request.method == 'POST':
         # Get user selections from the form
         sel_col = request.form.get('sel_col')
         sel_comp = request.form.get('sel_comp')
         plot_type = request.form.get('plot_type', '3D')
+        info_source = request.form.get('info_source', 'Abstracts')
 
     def clean_text(text):
         text = re.sub(r'\d+', '', str(text))
@@ -45,6 +46,10 @@ def index():
 
     print("LOADING DATAFRAME...")
     mycobacterium_df = pd.read_csv('data/mtuberculosis_df_abs.csv')
+    # Ensure both columns exist
+    if 'Abstracts' not in mycobacterium_df.columns or 'Function [CC]' not in mycobacterium_df.columns:
+        raise ValueError("The required columns 'Abstracts' and 'Function [CC]' are not present in the data file.")
+
     mycobacterium_df['Organism'] = mycobacterium_df['Organism'].apply(clean_text)
     organisms = mycobacterium_df['Organism'].unique()
 
@@ -100,14 +105,15 @@ def index():
     plot_df['Size'] = min_size + (plot_df[sel_col] * (max_size - min_size))
 
     print("COMPUTING EMBEDDINGS...")
-    embeddings = compute_embeddings()
+    # Compute/load embeddings based on selected info_source
+    embeddings = compute_embeddings(column=info_source)
 
     coords = None
-    # Check if plot_type is "3D PCA Based" or just '3D'
-    # To keep backward compatibility, let's treat '3D PCA Based' or '3D' the same.
+    # To handle 3D or PCA reduction
     if plot_type.startswith('3D'):
         print("REDUCING DIMENSIONS (PCA)...")
-        coords_file = 'data/coordinates.npy'
+        # We'll store separate coordinates for each info_source to avoid confusion
+        coords_file = f"data/coordinates_{info_source}.npy"
         if os.path.exists(coords_file):
             coords = np.load(coords_file)
         else:
@@ -165,11 +171,12 @@ def index():
 
         nodes.append(node)
 
-    edges = []  # No edges computed in this scenario
+    edges = []  # No edges in this scenario
 
     column_options = ['Counts_1st_normalized', 'Counts_2nd_normalized', 'Counts_3rd_normalized', 'Total_Counts_normalized', 'Rank_normalized']
     comparison_options = ['All proteomes', 'Mycobacterium tuberculosis', 'vs smegmatis', 'vs marinum', 'vs leprae', 'vs kansasii', 'vs intracellulare', 'vs fortuitum', 'vs bovis']
-    plot_options = ['3D PCA Based', '2D UMAP Based']
+    plot_options = ['2D UMAP Based', '3D PCA Based']
+    info_options = ['Abstracts', 'Function [CC]']
 
     return render_template('index.html',
                            nodes=nodes,
@@ -179,16 +186,20 @@ def index():
                            column_options=column_options,
                            comparison_options=comparison_options,
                            plot_type=plot_type,
-                           plot_options=plot_options)
+                           plot_options=plot_options,
+                           info_source=info_source,
+                           info_options=info_options)
 
 @app.route('/chatbot', methods=['POST'])
 def chatbot():
+    global info_source
     data = request.get_json()
     node_ids = data.get('node_ids', [])
     message = data.get('message', '')
     include_similar = data.get('include_similar', True)
-    response_text = get_chatbot_response(node_ids, message, include_similar)
+    response_text = get_chatbot_response(node_ids, message, include_similar, info_source)
     return jsonify({'message': response_text})
+
 
 if __name__ == '__main__':
     app.run(debug=True)
