@@ -1,3 +1,4 @@
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -30,37 +31,54 @@
             <!-- Controls -->
             <div id="controls">
                 <form method="POST" id="controls-form">
-                    <label for="sel_col">Select Column:</label>
-                    <select name="sel_col" id="sel_col">
-                        {% for option in column_options %}
-                            <option value="{{ option }}" {% if option == sel_col %}selected{% endif %}>{{ option }}</option>
-                        {% endfor %}
-                    </select>
-
-                    <label for="sel_comp">Select Comparison:</label>
-                    <select name="sel_comp" id="sel_comp">
-                        {% for option in comparison_options %}
-                            <option value="{{ option }}" {% if option == sel_comp %}selected{% endif %}>{{ option }}</option>
-                        {% endfor %}
-                    </select>
-
-                    <label for="plot_type">Plot Type:</label>
-                    <select name="plot_type" id="plot_type">
-                        {% for p_option in plot_options %}
-                            <option value="{{ p_option }}" {% if p_option == plot_type %}selected{% endif %}>{{ p_option }}</option>
-                        {% endfor %}
-                    </select>
-
-                    <label for="info_source">Info Source:</label>
-                    <select name="info_source" id="info_source">
-                        {% for i_option in info_options %}
-                            <option value="{{ i_option }}" {% if i_option == info_source %}selected{% endif %}>{{ i_option }}</option>
-                        {% endfor %}
-                    </select>
-
-                    <button type="submit">Update Plot</button>
+                    <!-- Flex container for Select Column and Select Comparison -->
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                        <div>
+                            <label for="sel_col">Select Column:</label>
+                            <select name="sel_col" id="sel_col">
+                                {% for option in column_options %}
+                                    <option value="{{ option }}" {% if option == sel_col %}selected{% endif %}>{{ option }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+            
+                        <div>
+                            <label for="sel_comp">Select Comparison:</label>
+                            <select name="sel_comp" id="sel_comp">
+                                {% for option in comparison_options %}
+                                    <option value="{{ option }}" {% if option == sel_comp %}selected{% endif %}>{{ option }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+            
+                    <!-- Flex container for Plot Type, Info Source, and Button -->
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                        <div>
+                            <label for="plot_type">Plot Type:</label>
+                            <select name="plot_type" id="plot_type">
+                                {% for p_option in plot_options %}
+                                    <option value="{{ p_option }}" {% if p_option == plot_type %}selected{% endif %}>{{ p_option }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+            
+                        <div>
+                            <label for="info_source">Info Source:</label>
+                            <select name="info_source" id="info_source">
+                                {% for i_option in info_options %}
+                                    <option value="{{ i_option }}" {% if i_option == info_source %}selected{% endif %}>{{ i_option }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+            
+                        <div>
+                            <button type="submit" style="margin-top: 30px;">Update Plot</button>
+                        </div>
+                    </div>
                 </form>
             </div>
+            
 
             <div id="selected-nodes-list">
                 <h3>Selected Proteins:</h3>
@@ -72,10 +90,13 @@
             </div>
             
 
-            <!-- Chatbot -->
-            <div id="chatbot" style="display:none;">
+            <!-- Chatbot: Always visible now -->
+            <div id="chatbot">
                 <h3>Chatbot</h3>
-                <label><input type="checkbox" id="include-similar" checked> Include Top 5 Similar Proteins</label>
+                <label class="toggle-container">
+                    <input type="checkbox" id="include-similar">
+                    <span class="slider"></span> Include Top 5 Similar Proteins
+                </label>
                 <div id="chatbot-messages"></div>
                 <div id="chatbot-input-container">
                     <input type="text" id="chatbot-input" placeholder="Type your message here...">
@@ -265,12 +286,7 @@
             }
 
             updateSelectedProteinsList();
-
-            if (selectedNodeIds.length > 0) {
-                document.getElementById('chatbot').style.display = 'block';
-            } else {
-                document.getElementById('chatbot').style.display = 'none';
-            }
+            // Removed code that hides/shows the chatbot
         });
 
         // Event listener to handle removing a single protein
@@ -279,9 +295,6 @@
                 var nodeIdToRemove = parseInt(e.target.getAttribute('data-node-id'));
                 selectedNodeIds = selectedNodeIds.filter(id => id !== nodeIdToRemove);
                 updateSelectedProteinsList();
-                if (selectedNodeIds.length === 0) {
-                    document.getElementById('chatbot').style.display = 'none';
-                }
             }
         });
 
@@ -289,7 +302,7 @@
         clearAllButton.addEventListener('click', function() {
             selectedNodeIds = [];
             updateSelectedProteinsList();
-            document.getElementById('chatbot').style.display = 'none';
+            // Removed code that hides the chatbot
         });
 
         var sendButton = document.getElementById('chatbot-send');
@@ -297,6 +310,7 @@
         var messagesDiv = document.getElementById('chatbot-messages');
 
         sendButton.onclick = function(){
+            // Keep the alert if no nodes are selected
             if (selectedNodeIds.length === 0) {
                 alert('Please select at least one node first.');
                 return;
@@ -326,9 +340,8 @@
             })
             .then(response => response.json())
             .then(data => {
-    messagesDiv.innerHTML += '<p><strong>PLVis:</strong></p>' + data.message;
-})
-
+                messagesDiv.innerHTML += '<p><strong>PLVis:</strong></p>' + data.message;
+            })
             .catch(error => {
                 console.error('Error:', error);
                 messagesDiv.innerHTML += '<p><strong>PLVis:</strong> An error occurred. Please try again later.</p>';

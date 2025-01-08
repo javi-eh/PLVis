@@ -27,7 +27,7 @@ body.dark-mode #chatbot-messages,
 body.dark-mode #chatbot-input-container {
     background: #222222;
     color: #ffffff;
-    border: 1px solid #444444;
+    /* border: 1px solid #444444; */
 }
 
 body.dark-mode #controls button,
@@ -381,3 +381,51 @@ body.dark-mode #selected-proteins-container {
     margin: 5px 0;
     font-size: 0.9em;
 }
+
+
+
+
+
+/* Toggle Contianer */
+
+.toggle-container {
+    display: inline-flex;
+    align-items: center;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+  }
+
+  .toggle-container input[type="checkbox"] {
+    display: none;
+  }
+
+  .toggle-container .slider {
+    position: relative;
+    width: 40px;
+    height: 20px;
+    margin-right: 10px;
+    background-color: #ccc;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+
+  .toggle-container .slider::before {
+    content: "";
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 2px;
+    left: 2px;
+    background-color: #fff;
+    border-radius: 50%;
+    transition: transform 0.7s ease;
+  }
+
+  .toggle-container input[type="checkbox"]:checked + .slider {
+    background-color: #4caf50;
+  }
+
+  .toggle-container input[type="checkbox"]:checked + .slider::before {
+    transform: translateX(20px);
+  }
